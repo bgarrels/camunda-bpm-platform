@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.camunda.bpm.engine.authorization.Permissions;
+import org.camunda.bpm.engine.authorization.Resources;
 import org.camunda.bpm.engine.impl.IncidentQueryImpl;
 import org.camunda.bpm.engine.impl.Page;
 import org.camunda.bpm.engine.impl.persistence.AbstractManager;
@@ -37,6 +39,7 @@ public class IncidentManager extends AbstractManager {
   }
 
   public long findIncidentCountByQueryCriteria(IncidentQueryImpl incidentQuery) {
+    configureAuthorizationCheck(incidentQuery);
     return (Long) getDbEntityManager().selectOne("selectIncidentCountByQueryCriteria", incidentQuery);
   }
 
@@ -54,7 +57,14 @@ public class IncidentManager extends AbstractManager {
 
   @SuppressWarnings("unchecked")
   public List<Incident> findIncidentByQueryCriteria(IncidentQueryImpl incidentQuery, Page page) {
+    configureAuthorizationCheck(incidentQuery);
     return getDbEntityManager().selectList("selectIncidentByQueryCriteria", incidentQuery, page);
+  }
+
+  protected void configureAuthorizationCheck(IncidentQueryImpl query) {
+    configureQuery(query);
+    addAuthorizationCheckParameter(query, Resources.PROCESS_INSTANCE, "RES.PROC_INST_ID_", Permissions.READ);
+    addAuthorizationCheckParameter(query, Resources.PROCESS_DEFINITION, "PROCDEF.KEY_", Permissions.READ_INSTANCES);
   }
 
 }

@@ -25,6 +25,7 @@ import java.util.Set;
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.identity.Group;
 import org.camunda.bpm.engine.impl.context.Context;
+import org.camunda.bpm.engine.impl.db.PermissionCheck;
 import org.camunda.bpm.engine.impl.interceptor.CommandContext;
 import org.camunda.bpm.engine.impl.interceptor.CommandExecutor;
 import org.camunda.bpm.engine.impl.persistence.entity.SuspensionState;
@@ -101,6 +102,8 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
   protected String caseInstanceBusinessKeyLike;
   protected String caseExecutionId;
 
+  // its a workaround to check authorization for standalone tasks
+  protected List<PermissionCheck> taskContextualAuthCheckParameters = new ArrayList<PermissionCheck>();
 
   public TaskQueryImpl() {
   }
@@ -1525,5 +1528,17 @@ public class TaskQueryImpl extends AbstractQuery<TaskQuery, Task> implements Tas
     return followUpNullAccepted;
   }
 
+  // getter/setter for authorization check
 
+  public List<PermissionCheck> getTaskContextualAuthCheckParameters() {
+    return taskContextualAuthCheckParameters;
+  }
+
+  public void setTaskContextualAuthCheckParameters(List<PermissionCheck> taskContextualAuthCheckParameters) {
+    this.taskContextualAuthCheckParameters = taskContextualAuthCheckParameters;
+  }
+
+  public void addTaskContextualAuthCheckParameter(PermissionCheck parameter) {
+    taskContextualAuthCheckParameters.add(parameter);
+  }
 }

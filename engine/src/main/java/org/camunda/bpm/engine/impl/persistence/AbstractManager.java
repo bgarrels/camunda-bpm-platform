@@ -13,6 +13,8 @@
 
 package org.camunda.bpm.engine.impl.persistence;
 
+import java.util.concurrent.Callable;
+
 import org.camunda.bpm.engine.authorization.Permission;
 import org.camunda.bpm.engine.authorization.Resource;
 import org.camunda.bpm.engine.impl.AbstractQuery;
@@ -23,6 +25,7 @@ import org.camunda.bpm.engine.impl.context.Context;
 import org.camunda.bpm.engine.impl.db.DbEntity;
 import org.camunda.bpm.engine.impl.db.entitymanager.DbEntityManager;
 import org.camunda.bpm.engine.impl.db.sql.DbSqlSession;
+import org.camunda.bpm.engine.impl.identity.Authentication;
 import org.camunda.bpm.engine.impl.interceptor.Session;
 import org.camunda.bpm.engine.impl.persistence.entity.AttachmentManager;
 import org.camunda.bpm.engine.impl.persistence.entity.AuthorizationEntity;
@@ -188,10 +191,34 @@ public abstract class AbstractManager implements Session {
 
   // authorizations ///////////////////////////////////////
 
+  protected void configureQuery(AbstractQuery<?,?> query) {
+    Context.getCommandContext()
+      .getAuthorizationManager()
+      .configureQuery(query);
+  }
+
   protected void configureQuery(AbstractQuery<?,?> query, Resource resource) {
     Context.getCommandContext()
       .getAuthorizationManager()
       .configureQuery(query, resource);
+  }
+
+  protected void configureQuery(AbstractQuery<?,?> query, Resource resource, String queryParam) {
+    Context.getCommandContext()
+      .getAuthorizationManager()
+      .configureQuery(query, resource, queryParam);
+  }
+
+  protected void configureQuery(AbstractQuery<?, ?> query, Resource resource, String queryParam, Permission permission) {
+    Context.getCommandContext()
+      .getAuthorizationManager()
+      .configureQuery(query, resource, queryParam, permission);
+  }
+
+  protected void addAuthorizationCheckParameter(AbstractQuery<?, ?> query, Resource resource, String queryParam, Permission permission) {
+    Context.getCommandContext()
+      .getAuthorizationManager()
+      .addAuthorizationCheckParameter(query, resource, queryParam, permission);
   }
 
   protected void checkAuthorization(Permission permission, Resource resource, String resourceId) {
@@ -200,6 +227,13 @@ public abstract class AbstractManager implements Session {
       .checkAuthorization(permission, resource, resourceId);
   }
 
+  protected boolean isAuthorizationEnabled() {
+    return Context.getProcessEngineConfiguration().isAuthorizationEnabled();
+  }
+
+  protected Authentication getCurrentAuthentication() {
+    return Context.getCommandContext().getAuthentication();
+  }
 
   protected ResourceAuthorizationProvider getResourceAuthorizationProvider() {
     return Context.getProcessEngineConfiguration()
@@ -213,14 +247,15 @@ public abstract class AbstractManager implements Session {
   }
 
   protected void saveDefaultAuthorizations(final AuthorizationEntity[] authorizations) {
-    if(authorizations != null) {
-      Context.getCommandContext().runWithoutAuthentication(new Runnable() {
-        public void run() {
+    if(authorizations != null && authorizations.length > 0) {
+      Context.getCommandContext().runWithoutAuthentication(new Callable<Void>() {
+        public Void call() {
           AuthorizationManager authorizationManager = Context.getCommandContext()
               .getAuthorizationManager();
           for (AuthorizationEntity authorization : authorizations) {
             authorizationManager.insert(authorization);
           }
+          return null;
         }
       });
     }

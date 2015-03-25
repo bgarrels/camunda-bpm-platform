@@ -52,7 +52,7 @@ public class ExecutionQueryImpl extends AbstractVariableQueryImpl<ExecutionQuery
   protected String superCaseInstanceId;
   protected String subCaseInstanceId;
   protected String caseInstanceId;
-  private String businessKey;
+  protected String businessKey;
 
   public ExecutionQueryImpl() {
   }

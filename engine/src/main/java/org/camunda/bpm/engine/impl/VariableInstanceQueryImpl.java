@@ -15,10 +15,12 @@ package org.camunda.bpm.engine.impl;
 import static org.camunda.bpm.engine.impl.util.EnsureUtil.ensureNotNull;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.camunda.bpm.engine.impl.db.PermissionCheck;
 import org.camunda.bpm.engine.impl.interceptor.CommandContext;
 import org.camunda.bpm.engine.impl.interceptor.CommandExecutor;
 import org.camunda.bpm.engine.impl.persistence.entity.VariableInstanceEntity;
@@ -49,6 +51,9 @@ public class VariableInstanceQueryImpl extends AbstractVariableQueryImpl<Variabl
 
   protected boolean isByteArrayFetchingEnabled = true;
   protected boolean isCustomObjectDeserializationEnabled = true;
+
+  // its a workaround to check authorization for variable instances associated with a standalone tasks
+  protected List<PermissionCheck> taskContextualAuthCheckParameters = new ArrayList<PermissionCheck>();
 
   public VariableInstanceQueryImpl() { }
 
@@ -228,6 +233,20 @@ public class VariableInstanceQueryImpl extends AbstractVariableQueryImpl<Variabl
 
   public String[] getActivityInstanceIds() {
     return activityInstanceIds;
+  }
+
+  // getter/setter for authorization check
+
+  public List<PermissionCheck> getTaskContextualAuthCheckParameters() {
+    return taskContextualAuthCheckParameters;
+  }
+
+  public void setTaskContextualAuthCheckParameters(List<PermissionCheck> taskContextualAuthCheckParameters) {
+    this.taskContextualAuthCheckParameters = taskContextualAuthCheckParameters;
+  }
+
+  public void addTaskContextualAuthCheckParameter(PermissionCheck parameter) {
+    taskContextualAuthCheckParameters.add(parameter);
   }
 
 }

@@ -12,7 +12,10 @@
  */
 package org.camunda.bpm.engine.runtime;
 
+import org.camunda.bpm.engine.AuthorizationException;
 import org.camunda.bpm.engine.ProcessEngineException;
+import org.camunda.bpm.engine.authorization.Permissions;
+import org.camunda.bpm.engine.authorization.Resources;
 
 /**
  * <p>A fluent builder to specify a modification of process instance state in terms
@@ -142,6 +145,10 @@ public interface ProcessInstanceModificationBuilder {
   /**
    * Execute all instructions. Custom execution and task listeners, as well as task input output mappings
    * are executed.
+   *
+   * @throws AuthorizationException
+   *          if the user has no {@link Permissions#UPDATE} permission on {@link Resources#PROCESS_INSTANCE}
+   *          or no {@link Permissions#UPDATE_INSTANCES} permission on {@link Resources#PROCESS_DEFINITION}.
    */
   void execute();
 
@@ -150,6 +157,10 @@ public interface ProcessInstanceModificationBuilder {
    *   should be invoked when executing the instructions
    * @param skipIoMappings specifies whether input/output mappings for tasks should be invoked
    *   throughout the transaction when executing the instructions
+   *
+   * @throws AuthorizationException
+   *          if the user has no {@link Permissions#UPDATE} permission on {@link Resources#PROCESS_INSTANCE}
+   *          or no {@link Permissions#UPDATE_INSTANCES} permission on {@link Resources#PROCESS_DEFINITION}.
    */
   void execute(boolean skipCustomListeners, boolean skipIoMappings);
 

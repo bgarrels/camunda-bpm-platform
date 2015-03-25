@@ -26,6 +26,9 @@ import org.camunda.bpm.engine.filter.Filter;
 import org.camunda.bpm.engine.identity.Group;
 import org.camunda.bpm.engine.identity.User;
 import org.camunda.bpm.engine.impl.persistence.entity.AuthorizationEntity;
+import org.camunda.bpm.engine.repository.ProcessDefinition;
+import org.camunda.bpm.engine.runtime.ProcessInstance;
+import org.camunda.bpm.engine.task.Task;
 
 /**
  * <p>Provides the default authorizations for camunda BPM.</p>
@@ -86,6 +89,21 @@ public class DefaultAuthorizationProvider implements ResourceAuthorizationProvid
       return null;
 
     }
+  }
+
+  public AuthorizationEntity[] newProcessDefinition(ProcessDefinition processDefinition) {
+    // no default authorizations on process definitions.
+    return null;
+  }
+
+  public AuthorizationEntity[] newProcessInstance(ProcessInstance processInstance) {
+    // no default authorizations on process instances.
+    return null;
+  }
+
+  public AuthorizationEntity[] newTask(Task task) {
+    // no default authorizations on tasks.
+    return null;
   }
 
 }

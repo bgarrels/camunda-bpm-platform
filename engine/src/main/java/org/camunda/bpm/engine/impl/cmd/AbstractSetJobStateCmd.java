@@ -44,6 +44,11 @@ public abstract class AbstractSetJobStateCmd extends AbstractSetStateCmd {
     }
   }
 
+  protected void checkAuthorization(CommandContext commandContext) {
+    // TODO:
+    return;
+  }
+
   protected void updateSuspensionState(CommandContext commandContext, SuspensionState suspensionState) {
     JobManager jobManager = commandContext.getJobManager();
 

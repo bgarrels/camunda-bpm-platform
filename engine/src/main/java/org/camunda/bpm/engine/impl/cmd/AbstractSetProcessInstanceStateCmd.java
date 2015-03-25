@@ -14,6 +14,7 @@ package org.camunda.bpm.engine.impl.cmd;
 
 import org.camunda.bpm.engine.ProcessEngineException;
 import org.camunda.bpm.engine.impl.interceptor.CommandContext;
+import org.camunda.bpm.engine.impl.persistence.entity.AuthorizationManager;
 import org.camunda.bpm.engine.impl.persistence.entity.ExecutionManager;
 import org.camunda.bpm.engine.impl.persistence.entity.PropertyChange;
 import org.camunda.bpm.engine.impl.persistence.entity.SuspensionState;
@@ -46,18 +47,22 @@ public abstract class AbstractSetProcessInstanceStateCmd extends AbstractSetStat
   protected void updateSuspensionState(CommandContext commandContext, SuspensionState suspensionState) {
     ExecutionManager executionManager = commandContext.getExecutionManager();
     TaskManager taskManager = commandContext.getTaskManager();
+    AuthorizationManager authorizationManager = commandContext.getAuthorizationManager();
 
     if (processInstanceId != null) {
+      authorizationManager.checkUpdateProcessInstance(processInstanceId);
       executionManager.updateExecutionSuspensionStateByProcessInstanceId(processInstanceId, suspensionState);
       taskManager.updateTaskSuspensionStateByProcessInstanceId(processInstanceId, suspensionState);
     } else
 
     if (processDefinitionId != null) {
+      authorizationManager.checkUpdateInstancesOnProcessDefinitionById(processDefinitionId);
       executionManager.updateExecutionSuspensionStateByProcessDefinitionId(processDefinitionId, suspensionState);
       taskManager.updateTaskSuspensionStateByProcessDefinitionId(processDefinitionId, suspensionState);
     } else
 
     if (processDefinitionKey != null) {
+      authorizationManager.checkUpdateInstancesOnProcessDefinitionByKey(processDefinitionKey);
       executionManager.updateExecutionSuspensionStateByProcessDefinitionKey(processDefinitionKey, suspensionState);
       taskManager.updateTaskSuspensionStateByProcessDefinitionKey(processDefinitionKey, suspensionState);
     }

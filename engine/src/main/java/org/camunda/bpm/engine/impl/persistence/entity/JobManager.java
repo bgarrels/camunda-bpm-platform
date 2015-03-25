@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.camunda.bpm.engine.authorization.Permissions;
+import org.camunda.bpm.engine.authorization.Resources;
 import org.camunda.bpm.engine.impl.JobQueryImpl;
 import org.camunda.bpm.engine.impl.Page;
 import org.camunda.bpm.engine.impl.cfg.TransactionListener;
@@ -173,8 +175,8 @@ public class JobManager extends AbstractManager {
 
   @SuppressWarnings("unchecked")
   public List<Job> findJobsByQueryCriteria(JobQueryImpl jobQuery, Page page) {
-    final String query = "selectJobByQueryCriteria";
-    return getDbEntityManager().selectList(query, jobQuery, page);
+    configureAuthorizationCheck(jobQuery);
+    return getDbEntityManager().selectList("selectJobByQueryCriteria", jobQuery, page);
   }
 
   @SuppressWarnings("unchecked")
@@ -196,6 +198,7 @@ public class JobManager extends AbstractManager {
   }
 
   public long findJobCountByQueryCriteria(JobQueryImpl jobQuery) {
+    configureAuthorizationCheck(jobQuery);
     return (Long) getDbEntityManager().selectOne("selectJobCountByQueryCriteria", jobQuery);
   }
 
@@ -255,6 +258,12 @@ public class JobManager extends AbstractManager {
     parameters.put("jobDefinitionId", jobDefinitionId);
     parameters.put("retries", retries);
     getDbEntityManager().update(JobEntity.class, "updateFailedJobRetriesByParameters", parameters);
+  }
+
+  protected void configureAuthorizationCheck(JobQueryImpl query) {
+    configureQuery(query);
+    addAuthorizationCheckParameter(query, Resources.PROCESS_INSTANCE, "RES.PROCESS_INSTANCE_ID_", Permissions.READ);
+    addAuthorizationCheckParameter(query, Resources.PROCESS_DEFINITION, "RES.PROCESS_DEF_KEY_", Permissions.READ_INSTANCES);
   }
 
 }

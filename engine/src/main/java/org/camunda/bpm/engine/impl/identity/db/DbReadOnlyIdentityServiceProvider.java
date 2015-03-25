@@ -114,11 +114,16 @@ public class DbReadOnlyIdentityServiceProvider extends AbstractManager implement
       .configureQuery(query, resource);
   }
 
+  protected void configureQuery(@SuppressWarnings("rawtypes") AbstractQuery query, Resource resource, String queryParam) {
+    Context.getCommandContext()
+      .getAuthorizationManager()
+      .configureQuery(query, resource, queryParam);
+  }
+
   protected void checkAuthorization(Permission permission, Resource resource, String resourceId) {
     Context.getCommandContext()
       .getAuthorizationManager()
       .checkAuthorization(permission, resource, resourceId);
  }
-
 
 }

@@ -16,9 +16,12 @@ package org.camunda.bpm.engine.impl.persistence.entity;
 import java.util.List;
 import java.util.Map;
 
+import org.camunda.bpm.engine.authorization.Permissions;
+import org.camunda.bpm.engine.authorization.Resources;
 import org.camunda.bpm.engine.impl.Page;
 import org.camunda.bpm.engine.impl.VariableInstanceQueryImpl;
 import org.camunda.bpm.engine.impl.core.variable.CoreVariableInstance;
+import org.camunda.bpm.engine.impl.db.PermissionCheck;
 import org.camunda.bpm.engine.impl.persistence.AbstractManager;
 import org.camunda.bpm.engine.runtime.VariableInstance;
 
@@ -53,12 +56,28 @@ public class VariableInstanceManager extends AbstractManager {
   }
 
   public long findVariableInstanceCountByQueryCriteria(VariableInstanceQueryImpl variableInstanceQuery) {
+    configureAuthorizationCheck(variableInstanceQuery);
     return (Long) getDbEntityManager().selectOne("selectVariableInstanceCountByQueryCriteria", variableInstanceQuery);
   }
 
   @SuppressWarnings("unchecked")
   public List<VariableInstance> findVariableInstanceByQueryCriteria(VariableInstanceQueryImpl variableInstanceQuery, Page page) {
+    configureAuthorizationCheck(variableInstanceQuery);
     return getDbEntityManager().selectList("selectVariableInstanceByQueryCriteria", variableInstanceQuery, page);
+  }
+
+  protected void configureAuthorizationCheck(VariableInstanceQueryImpl query) {
+    configureQuery(query);
+    addAuthorizationCheckParameter(query, Resources.PROCESS_INSTANCE, "RES.PROC_INST_ID_", Permissions.READ);
+    addAuthorizationCheckParameter(query, Resources.PROCESS_DEFINITION, "PROCDEF.KEY_", Permissions.READ_INSTANCES);
+
+    query.getTaskContextualAuthCheckParameters().clear();
+    PermissionCheck taskContextualAuthCheckParam = new PermissionCheck();
+    taskContextualAuthCheckParam.setAuthResourceType(Resources.TASK.resourceType());
+    taskContextualAuthCheckParam.setAuthPerms(Permissions.READ.getValue());
+    taskContextualAuthCheckParam.setAuthResourceIdQueryParam("RES.TASK_ID_");
+    taskContextualAuthCheckParam.setNoAuthFound(0l);
+    query.addTaskContextualAuthCheckParameter(taskContextualAuthCheckParam);
   }
 
 }

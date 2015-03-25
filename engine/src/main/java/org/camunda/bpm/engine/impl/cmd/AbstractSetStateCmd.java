@@ -13,6 +13,7 @@
 package org.camunda.bpm.engine.impl.cmd;
 
 import java.util.Date;
+import java.util.concurrent.Callable;
 
 import org.camunda.bpm.engine.impl.interceptor.Command;
 import org.camunda.bpm.engine.impl.interceptor.CommandContext;
@@ -36,28 +37,36 @@ public abstract class AbstractSetStateCmd implements Command<Void> {
     this.executionDate = executionDate;
   }
 
-  public Void execute(CommandContext commandContext) {
+  public Void execute(final CommandContext commandContext) {
     checkParameters(commandContext);
+    checkAuthorization(commandContext);
 
-    if (executionDate == null) {
-      updateSuspensionState(commandContext, getNewSuspensionState());
+    commandContext.runWithoutAuthentication(new Callable<Void>() {
+      public Void call() throws Exception {
+        if (executionDate == null) {
 
-      if (isIncludeSubResources()) {
-        AbstractSetStateCmd cmd = getNextCommand();
-        if (cmd != null) {
-          cmd.disableLogUserOperation();
-          cmd.execute(commandContext);
+          updateSuspensionState(commandContext, getNewSuspensionState());
+
+          if (isIncludeSubResources()) {
+            AbstractSetStateCmd cmd = getNextCommand();
+            if (cmd != null) {
+              cmd.disableLogUserOperation();
+              cmd.execute(commandContext);
+            }
+          }
+
         }
+        else {
+          scheduleSuspensionStateUpdate(commandContext);
+        }
+
+        if (!isLogUserOperationDisabled()) {
+          logUserOperation(commandContext);
+        }
+
+        return null;
       }
-
-    }
-    else {
-      scheduleSuspensionStateUpdate(commandContext);
-    }
-
-    if (!isLogUserOperationDisabled()) {
-      logUserOperation(commandContext);
-    }
+    });
 
     return null;
   }
@@ -97,6 +106,8 @@ public abstract class AbstractSetStateCmd implements Command<Void> {
   protected AbstractSetStateCmd getNextCommand() {
     return null;
   }
+
+  protected abstract void checkAuthorization(CommandContext commandContext);
 
   protected abstract void checkParameters(CommandContext commandContext);
 

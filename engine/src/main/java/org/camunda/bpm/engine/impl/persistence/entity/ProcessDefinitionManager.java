@@ -13,6 +13,8 @@
 
 package org.camunda.bpm.engine.impl.persistence.entity;
 
+import static org.camunda.bpm.engine.authorization.Resources.PROCESS_DEFINITION;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,7 @@ import org.camunda.bpm.engine.identity.Group;
 import org.camunda.bpm.engine.identity.User;
 import org.camunda.bpm.engine.impl.Page;
 import org.camunda.bpm.engine.impl.ProcessDefinitionQueryImpl;
+import org.camunda.bpm.engine.impl.cfg.auth.ResourceAuthorizationProvider;
 import org.camunda.bpm.engine.impl.persistence.AbstractManager;
 import org.camunda.bpm.engine.repository.ProcessDefinition;
 
@@ -33,24 +36,31 @@ import org.camunda.bpm.engine.repository.ProcessDefinition;
  */
 public class ProcessDefinitionManager extends AbstractManager {
 
-  public ProcessDefinitionEntity findLatestProcessDefinitionByKey(String processDefinitionKey) {
-    return (ProcessDefinitionEntity) getDbEntityManager().selectOne("selectLatestProcessDefinitionByKey", processDefinitionKey);
+  // insert ///////////////////////////////////////////////////////////
+
+  public void insertProcessDefinition(ProcessDefinitionEntity processDefinition) {
+    getDbEntityManager().insert(processDefinition);
+    createDefaultAuthorizations(processDefinition);
   }
 
-  public void deleteProcessDefinitionsByDeploymentId(String deploymentId) {
-    getDbEntityManager().delete(ProcessDefinitionEntity.class, "deleteProcessDefinitionsByDeploymentId", deploymentId);
+  // select ///////////////////////////////////////////////////////////
+
+  public ProcessDefinitionEntity findLatestProcessDefinitionByKey(String processDefinitionKey) {
+    return (ProcessDefinitionEntity) getDbEntityManager().selectOne("selectLatestProcessDefinitionByKey", processDefinitionKey);
   }
 
   public ProcessDefinitionEntity findLatestProcessDefinitionById(String processDefinitionId) {
     return getDbEntityManager().selectById(ProcessDefinitionEntity.class, processDefinitionId);
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked" })
   public List<ProcessDefinition> findProcessDefinitionsByQueryCriteria(ProcessDefinitionQueryImpl processDefinitionQuery, Page page) {
+    configureProcessDefinitionQuery(processDefinitionQuery);
     return getDbEntityManager().selectList("selectProcessDefinitionsByQueryCriteria", processDefinitionQuery, page);
   }
 
   public long findProcessDefinitionCountByQueryCriteria(ProcessDefinitionQueryImpl processDefinitionQuery) {
+    configureProcessDefinitionQuery(processDefinitionQuery);
     return (Long) getDbEntityManager().selectOne("selectProcessDefinitionCountByQueryCriteria", processDefinitionQuery);
   }
 
@@ -92,6 +102,13 @@ public class ProcessDefinitionManager extends AbstractManager {
     return null;
   }
 
+  @SuppressWarnings("unchecked")
+  public List<ProcessDefinition> findProcessDefinitionsByDeploymentId(String deploymentId) {
+    return getDbEntityManager().selectList("selectProcessDefinitionByDeploymentId", deploymentId);
+  }
+
+  // update ///////////////////////////////////////////////////////////
+
   public void updateProcessDefinitionSuspensionStateById(String processDefinitionId, SuspensionState suspensionState) {
     Map<String, Object> parameters = new HashMap<String, Object>();
     parameters.put("processDefinitionId", processDefinitionId);
@@ -106,9 +123,23 @@ public class ProcessDefinitionManager extends AbstractManager {
     getDbEntityManager().update(ProcessDefinitionEntity.class, "updateProcessDefinitionSuspensionStateByParameters", parameters);
   }
 
+  // delete  ///////////////////////////////////////////////////////////
 
-  @SuppressWarnings("unchecked")
-  public List<ProcessDefinition> findProcessDefinitionsByDeploymentId(String deploymentId) {
-    return getDbEntityManager().selectList("selectProcessDefinitionByDeploymentId", deploymentId);
+  public void deleteProcessDefinitionsByDeploymentId(String deploymentId) {
+    getDbEntityManager().delete(ProcessDefinitionEntity.class, "deleteProcessDefinitionsByDeploymentId", deploymentId);
+  }
+
+  // helper ///////////////////////////////////////////////////////////
+
+  protected void createDefaultAuthorizations(ProcessDefinition processDefinition) {
+    if(isAuthorizationEnabled()) {
+      ResourceAuthorizationProvider provider = getResourceAuthorizationProvider();
+      AuthorizationEntity[] authorizations = provider.newProcessDefinition(processDefinition);
+      saveDefaultAuthorizations(authorizations);
+    }
+  }
+
+  protected void configureProcessDefinitionQuery(ProcessDefinitionQueryImpl query) {
+    configureQuery(query, PROCESS_DEFINITION, "RES.KEY_");
   }
 }

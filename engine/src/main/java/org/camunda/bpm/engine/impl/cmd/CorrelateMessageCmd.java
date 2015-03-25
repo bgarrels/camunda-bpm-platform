@@ -13,7 +13,11 @@
 
 package org.camunda.bpm.engine.impl.cmd;
 
+import static org.camunda.bpm.engine.impl.util.EnsureUtil.ensureAtLeastOneNotNull;
+import static org.camunda.bpm.engine.impl.util.EnsureUtil.ensureNotNull;
+
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.camunda.bpm.engine.MismatchingMessageCorrelationException;
 import org.camunda.bpm.engine.impl.MessageCorrelationBuilderImpl;
@@ -22,8 +26,6 @@ import org.camunda.bpm.engine.impl.interceptor.CommandContext;
 import org.camunda.bpm.engine.impl.runtime.CorrelationHandler;
 import org.camunda.bpm.engine.impl.runtime.CorrelationSet;
 import org.camunda.bpm.engine.impl.runtime.MessageCorrelationResult;
-
-import static org.camunda.bpm.engine.impl.util.EnsureUtil.ensureAtLeastOneNotNull;
 
 /**
  * @author Thorben Lindhauer
@@ -46,19 +48,25 @@ public class CorrelateMessageCmd extends AbstractCorrelateMessageCmd {
     super(messageCorrelationBuilderImpl);
   }
 
-  public Void execute(CommandContext commandContext) {
+  public Void execute(final CommandContext commandContext) {
     ensureAtLeastOneNotNull("At least one of the following correlation criteria has to be present: "
         + "messageName, businessKey, correlationKeys, processInstanceId", messageName, businessKey, correlationKeys, processInstanceId);
 
-    CorrelationHandler correlationHandler = Context.getProcessEngineConfiguration().getCorrelationHandler();
+    final CorrelationHandler correlationHandler = Context.getProcessEngineConfiguration().getCorrelationHandler();
 
-    CorrelationSet correlationSet = new CorrelationSet(businessKey, processInstanceId, correlationKeys);
-    MessageCorrelationResult correlationResult = correlationHandler.correlateMessage(commandContext, messageName, correlationSet);
+    final CorrelationSet correlationSet = new CorrelationSet(businessKey, processInstanceId, correlationKeys);
+    MessageCorrelationResult correlationResult = commandContext.runWithoutAuthentication(new Callable<MessageCorrelationResult>() {
+      public MessageCorrelationResult call() throws Exception {
+        return correlationHandler.correlateMessage(commandContext, messageName, correlationSet);
+      }
+    });
 
-    if (correlationResult == null) {
-      throw new MismatchingMessageCorrelationException(messageName, "No process definition or execution matches the parameters");
+    ensureNotNull(MismatchingMessageCorrelationException.class, "No process definition or execution matches the parameters", "messageName", messageName);
 
-    } else if (MessageCorrelationResult.TYPE_EXECUTION.equals(correlationResult.getResultType())) {
+    // check authorization
+    checkAuthorization(correlationResult);
+
+    if (MessageCorrelationResult.TYPE_EXECUTION.equals(correlationResult.getResultType())) {
       triggerExecution(commandContext, correlationResult);
 
     } else {

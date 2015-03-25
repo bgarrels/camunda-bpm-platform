@@ -40,6 +40,8 @@ public class AuthorizationQueryImpl extends AbstractQuery<AuthorizationQuery, Au
   protected boolean queryByPermission = false;
   protected boolean queryByResourceType = false;
 
+  public AuthorizationQueryImpl() {}
+
   public AuthorizationQueryImpl(CommandExecutor commandExecutor) {
     super(commandExecutor);
   }

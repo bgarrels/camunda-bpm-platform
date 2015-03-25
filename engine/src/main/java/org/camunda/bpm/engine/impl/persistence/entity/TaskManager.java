@@ -13,24 +13,34 @@
 
 package org.camunda.bpm.engine.impl.persistence.entity;
 
+import static org.camunda.bpm.engine.impl.util.EnsureUtil.ensureNotNull;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.camunda.bpm.engine.authorization.Permissions;
+import org.camunda.bpm.engine.authorization.Resources;
 import org.camunda.bpm.engine.history.UserOperationLogEntry;
 import org.camunda.bpm.engine.impl.Page;
 import org.camunda.bpm.engine.impl.TaskQueryImpl;
+import org.camunda.bpm.engine.impl.cfg.auth.ResourceAuthorizationProvider;
 import org.camunda.bpm.engine.impl.context.Context;
+import org.camunda.bpm.engine.impl.db.PermissionCheck;
 import org.camunda.bpm.engine.impl.interceptor.CommandContext;
 import org.camunda.bpm.engine.impl.persistence.AbstractManager;
 import org.camunda.bpm.engine.task.Task;
-
-import static org.camunda.bpm.engine.impl.util.EnsureUtil.ensureNotNull;
 
 
 /**
  * @author Tom Baeyens
  */
 public class TaskManager extends AbstractManager {
+
+  public void insertTask(TaskEntity task) {
+    getDbEntityManager().insert(task);
+    createDefaultAuthorizations(task);
+  }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public void deleteTasksByProcessInstanceId(String processInstanceId, String deleteReason, boolean cascade) {
@@ -129,11 +139,12 @@ public class TaskManager extends AbstractManager {
 
   @SuppressWarnings("unchecked")
   public List<Task> findTasksByQueryCriteria(TaskQueryImpl taskQuery) {
-    final String query = "selectTaskByQueryCriteria";
-    return getDbEntityManager().selectList(query, taskQuery);
+    configureAuthorizationCheck(taskQuery);
+    return getDbEntityManager().selectList("selectTaskByQueryCriteria", taskQuery);
   }
 
   public long findTaskCountByQueryCriteria(TaskQueryImpl taskQuery) {
+    configureAuthorizationCheck(taskQuery);
     return (Long) getDbEntityManager().selectOne("selectTaskCountByQueryCriteria", taskQuery);
   }
 
@@ -178,6 +189,30 @@ public class TaskManager extends AbstractManager {
     parameters.put("suspensionState", suspensionState.getStateCode());
     getDbEntityManager().update(TaskEntity.class, "updateTaskSuspensionStateByParameters", parameters);
 
+  }
+
+  // helper ///////////////////////////////////////////////////////////
+
+  protected void createDefaultAuthorizations(TaskEntity task) {
+    if(isAuthorizationEnabled()) {
+      ResourceAuthorizationProvider provider = getResourceAuthorizationProvider();
+      AuthorizationEntity[] authorizations = provider.newTask(task);
+      saveDefaultAuthorizations(authorizations);
+    }
+  }
+
+  protected void configureAuthorizationCheck(TaskQueryImpl query) {
+    configureQuery(query);
+    addAuthorizationCheckParameter(query, Resources.TASK, "RES.ID_", Permissions.READ);
+    addAuthorizationCheckParameter(query, Resources.PROCESS_DEFINITION, "PROCDEF.KEY_", Permissions.READ_TASKS);
+
+    query.getTaskContextualAuthCheckParameters().clear();
+    PermissionCheck taskContextualAuthCheckParam = new PermissionCheck();
+    taskContextualAuthCheckParam.setAuthResourceType(Resources.TASK.resourceType());
+    taskContextualAuthCheckParam.setAuthPerms(Permissions.READ.getValue());
+    taskContextualAuthCheckParam.setAuthResourceIdQueryParam("RES.ID_");
+    taskContextualAuthCheckParam.setNoAuthFound(0l);
+    query.addTaskContextualAuthCheckParameter(taskContextualAuthCheckParam);
   }
 
 }

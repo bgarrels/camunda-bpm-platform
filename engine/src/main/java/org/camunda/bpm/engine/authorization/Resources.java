@@ -27,7 +27,10 @@ public enum Resources implements Resource {
   GROUP(EntityTypes.GROUP, 2),
   GROUP_MEMBERSHIP(EntityTypes.GROUP_MEMBERSHIP, 3),
   AUTHORIZATION(EntityTypes.AUTHORIZATION, 4),
-  FILTER(EntityTypes.FILTER, 5);
+  FILTER(EntityTypes.FILTER, 5),
+  PROCESS_DEFINITION(EntityTypes.PROCESS_DEFINITION, 6),
+  PROCESS_INSTANCE(EntityTypes.PROCESS_INSTANCE, 7),
+  TASK(EntityTypes.TASK, 8);
 
   String name;
   int id;
